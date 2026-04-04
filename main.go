@@ -16,59 +16,53 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
-type Session struct {
-	ID        string
-	Username  string
-	ExpiresAt time.Time
-}
-
-var ctx = context.Background()
-
 // смотрим куки session
-func checkSession(r *http.Request) (Session, bool) {
+func checkSession(r *http.Request) (repository.Session, bool) {
+	ctx := r.Context()
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		return Session{}, false
+		return repository.Session{}, false
 	}
 
-	// Получаем JSON строку из Redis
+	// Получаем JSON из Redis
 	sessionJSON, err := repository.GetSession_FromRedis(ctx, cookie.Value)
 	if err != nil {
 		log.Printf("Error getting session from Redis: %v", err)
-		return Session{}, false
+		return repository.Session{}, false
 	}
 
-	// Декодируем JSON в структуру Session
-	var session Session
-	err = json.Unmarshal([]byte(sessionJSON), &session)
-	if err != nil {
-		log.Printf("Error unmarshaling session: %v", err)
-		return Session{}, false
+	if time.Now().After(sessionJSON.ExpiresAt) {
+		return repository.Session{}, false
 	}
-	return session, true
+
+	return sessionJSON, true
 }
 
 // создаем куки
-func createSession(w http.ResponseWriter, username string) {
+func createSession(w http.ResponseWriter, username string, ctx context.Context) {
 	sessionID := generateSessionID()
+
 	//описываем новую сессию
-	session := Session{
+	session := repository.Session{
 		ID:        sessionID,
 		Username:  username,
 		ExpiresAt: time.Now().Add(30 * time.Minute),
+		Role:      "user",
 	}
-	// // в мапу добавляем сессию созданную
-	// sessions[sessionID] = session
-	//полагаю должен быть ID постгри, как ссылка на пользователя. а роль в редис тоже хранить ?
-	repository.SetSession_InRedis(ctx, sessionID, username, session.ExpiresAt)
+
+	if err := repository.SetSession_InRedis(ctx, session); err != nil {
+		http.Error(w, "Internal error", 500)
+		return
+	}
 
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
 		Path:     "/",
-		HttpOnly: true,                     //защита от XSS
-		SameSite: http.SameSiteDefaultMode, //защита от CSRF
-		MaxAge:   1800,                     //30 мин
+		HttpOnly: true,                    //защита от XSS
+		SameSite: http.SameSiteStrictMode, //защита от CSRF
+		MaxAge:   1800,                    //30 мин
+		//Secure:   true,
 	}
 	http.SetCookie(w, cookie)
 }
@@ -92,8 +86,8 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Use POST"})
 		return
 	}
-	defer r.Body.Close()
-
+	//defer r.Body.Close()
+	ctx := r.Context()
 	var creds Credentials
 
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
@@ -112,7 +106,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//создаем сессию
-	createSession(w, creds.Username)
+	createSession(w, creds.Username, ctx)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -137,6 +131,12 @@ func protectedHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	cookie, err := r.Cookie("session_id")
+	if err == nil {
+		repository.DeleteSession_FromRedis(ctx, cookie.Value)
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_id",
 		Value:    "",
@@ -145,10 +145,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	})
 
-	if cookie, err := r.Cookie("session_id"); err == nil {
-		repository.DeleteSession_FromRedis(ctx, cookie.Value)
-	}
-
 	jsonResponse(w, http.StatusOK, map[string]string{
 		"message": "Logged out successfully",
 	})
@@ -156,11 +152,11 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	repository.ConnectionRedis(context.Background())
+
 	http.HandleFunc("/post/signin", authHandler)
 	http.HandleFunc("/protected", protectedHandler)
 	http.HandleFunc("/post/logout", logoutHandler)
-
-	repository.ConnectionRedis(ctx)
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

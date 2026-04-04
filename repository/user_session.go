@@ -2,35 +2,62 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
+
+type Session struct {
+	ID        string
+	Username  string
+	ExpiresAt time.Time
+	Role      string
+}
 
 var RedisClient *redis.Client
 
-func SetSession_InRedis(ctx context.Context, sessionID string, username string, expiresAt time.Time) error {
-	ttl := time.Until(expiresAt)
-	err := RedisClient.Set(ctx, sessionID, username, ttl).Err()
+func SetSession_InRedis(ctx context.Context, session Session) error {
+	ttl := time.Until(session.ExpiresAt)
+
+	data, err := json.Marshal(session)
+	if err != nil {
+		return err
+	}
+
+	err = RedisClient.Set(ctx, "session_id:"+session.ID, data, ttl).Err()
 	if err != nil {
 		fmt.Println("Error write", err)
+		return err
 	}
 	fmt.Println("Success writer into Redis!")
 	return nil
 }
 
-func GetSession_FromRedis(ctx context.Context, sessionID string) (string, error) {
-	value, err := RedisClient.Get(ctx, sessionID).Result()
+func GetSession_FromRedis(ctx context.Context, sessionID string) (Session, error) {
+	var session Session
+
+	key := "session_id:" + sessionID
+
+	value, err := RedisClient.Get(ctx, key).Result()
 	if err != nil {
 		fmt.Println("Error receiving ", err)
+		return session, err
+	}
+
+	err = json.Unmarshal([]byte(value), &session)
+	if err != nil {
+		return session, err
 	}
 
 	fmt.Println("Success receipt ")
-	return value, nil
+	return session, nil
 }
 
 func DeleteSession_FromRedis(ctx context.Context, sessionID string) error {
-	deleteCount, err := RedisClient.Del(ctx, sessionID).Result()
+	key := "session_id:" + sessionID
+	deleteCount, err := RedisClient.Del(ctx, key).Result()
 	if err != nil {
 		fmt.Println("Error delete", err)
 		return err
@@ -46,7 +73,7 @@ func DeleteSession_FromRedis(ctx context.Context, sessionID string) error {
 }
 
 func ConnectionRedis(ctx context.Context) {
-	RedisClient := redis.NewClient(&redis.Options{
+	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
