@@ -1,4 +1,4 @@
-package repository
+package postgres
 
 func IdentificationRepo(username, password string) bool {
 	userInit := map[string]string{"Alexey": "1234"}

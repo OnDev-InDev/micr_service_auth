@@ -1,24 +1,17 @@
-package repository
+package redis
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/redis/go-redis/v9"
+	"micr_service_auth/internal/storage/models"
+	"micr_service_auth/internal/storage/connection_db"
 )
 
-type Session struct {
-	ID        string
-	Username  string
-	ExpiresAt time.Time
-	Role      string
-}
 
-var RedisClient *redis.Client
 
-func SetSession_InRedis(ctx context.Context, session Session) error {
+func SetSession_InRedis(ctx context.Context, session models.Session) error {
 	ttl := time.Until(session.ExpiresAt)
 
 	data, err := json.Marshal(session)
@@ -26,7 +19,7 @@ func SetSession_InRedis(ctx context.Context, session Session) error {
 		return err
 	}
 
-	err = RedisClient.Set(ctx, "session_id:"+session.ID, data, ttl).Err()
+	err = connection_db.RedisClient.Set(ctx, "session_id:"+session.ID, data, ttl).Err()
 	if err != nil {
 		fmt.Println("Error write", err)
 		return err
@@ -35,12 +28,12 @@ func SetSession_InRedis(ctx context.Context, session Session) error {
 	return nil
 }
 
-func GetSession_FromRedis(ctx context.Context, sessionID string) (Session, error) {
-	var session Session
+func GetSession_FromRedis(ctx context.Context, sessionID string) (models.Session, error) {
+	var session models.Session
 
 	key := "session_id:" + sessionID
 
-	value, err := RedisClient.Get(ctx, key).Result()
+	value, err := connection_db.RedisClient.Get(ctx, key).Result()
 	if err != nil {
 		fmt.Println("Error receiving ", err)
 		return session, err
@@ -57,7 +50,7 @@ func GetSession_FromRedis(ctx context.Context, sessionID string) (Session, error
 
 func DeleteSession_FromRedis(ctx context.Context, sessionID string) error {
 	key := "session_id:" + sessionID
-	deleteCount, err := RedisClient.Del(ctx, key).Result()
+	deleteCount, err := connection_db.RedisClient.Del(ctx, key).Result()
 	if err != nil {
 		fmt.Println("Error delete", err)
 		return err
@@ -70,20 +63,4 @@ func DeleteSession_FromRedis(ctx context.Context, sessionID string) error {
 
 	fmt.Println("Success delete", deleteCount)
 	return nil
-}
-
-func ConnectionRedis(ctx context.Context) {
-	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
-		DB:       0,
-	})
-
-	_, err := RedisClient.Ping(ctx).Result()
-	if err != nil {
-		fmt.Println("Error connection Redis", err)
-		return
-	}
-
-	fmt.Println("Connection Redis OK!")
 }

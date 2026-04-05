@@ -1,4 +1,4 @@
-module service_auth
+module micr_service_auth
 
 go 1.26.1
 

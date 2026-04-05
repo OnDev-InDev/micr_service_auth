@@ -1,38 +1,34 @@
-package main
+package http_layer
 
 import (
 	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-	repository "service_auth/repository"
 	"time"
-
+  "micr_service_auth/internal/storage/repository/redis"
+	"micr_service_auth/internal/storage/repository/postgres"
+	"micr_service_auth/internal/storage/models"
 	"github.com/google/uuid"
 )
 
-type Credentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
 // смотрим куки session
-func checkSession(r *http.Request) (repository.Session, bool) {
+func checkSession(r *http.Request) (models.Session, bool) {
 	ctx := r.Context()
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
-		return repository.Session{}, false
+		return models.Session{}, false
 	}
 
 	// Получаем JSON из Redis
-	sessionJSON, err := repository.GetSession_FromRedis(ctx, cookie.Value)
+	sessionJSON, err := redis.GetSession_FromRedis(ctx, cookie.Value)
 	if err != nil {
 		log.Printf("Error getting session from Redis: %v", err)
-		return repository.Session{}, false
+		return models.Session{}, false
 	}
 
 	if time.Now().After(sessionJSON.ExpiresAt) {
-		return repository.Session{}, false
+		return models.Session{}, false
 	}
 
 	return sessionJSON, true
@@ -43,14 +39,14 @@ func createSession(w http.ResponseWriter, username string, ctx context.Context) 
 	sessionID := generateSessionID()
 
 	//описываем новую сессию
-	session := repository.Session{
+	session := models.Session{
 		ID:        sessionID,
 		Username:  username,
 		ExpiresAt: time.Now().Add(30 * time.Minute),
 		Role:      "user",
 	}
 
-	if err := repository.SetSession_InRedis(ctx, session); err != nil {
+	if err := redis.SetSession_InRedis(ctx, session); err != nil {
 		http.Error(w, "Internal error", 500)
 		return
 	}
@@ -81,7 +77,7 @@ func jsonResponse(w http.ResponseWriter, status int, data interface{}) {
 }
 
 // логинимся
-func authHandler(w http.ResponseWriter, r *http.Request) {
+func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Use POST"})
 		return
@@ -101,7 +97,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//идентификация
-	if !repository.IdentificationRepo(creds.Username, creds.Password) {
+	if !postgres.IdentificationRepo(creds.Username, creds.Password) {
 		jsonResponse(w, http.StatusUnauthorized, map[string]string{"error": "Invalid credentials"})
 		return
 	}
@@ -115,7 +111,7 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ручка для авторизованных
-func protectedHandler(w http.ResponseWriter, r *http.Request) {
+func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	session, ok := checkSession(r)
 	if !ok {
 		jsonResponse(w, http.StatusUnauthorized, map[string]string{
@@ -130,11 +126,11 @@ func protectedHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
+func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cookie, err := r.Cookie("session_id")
 	if err == nil {
-		repository.DeleteSession_FromRedis(ctx, cookie.Value)
+		redis.DeleteSession_FromRedis(ctx, cookie.Value)
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -148,16 +144,4 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]string{
 		"message": "Logged out successfully",
 	})
-
-}
-
-func main() {
-	repository.ConnectionRedis(context.Background())
-
-	http.HandleFunc("/post/signin", authHandler)
-	http.HandleFunc("/protected", protectedHandler)
-	http.HandleFunc("/post/logout", logoutHandler)
-
-	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
 }
