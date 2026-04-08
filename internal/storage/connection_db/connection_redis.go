@@ -3,11 +3,11 @@ package connection_db
 import (
 	"context"
 	"fmt"
-  "github.com/redis/go-redis/v9"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var RedisClient *redis.Client
-
 
 func ConnectionRedis(ctx context.Context) {
 	RedisClient = redis.NewClient(&redis.Options{

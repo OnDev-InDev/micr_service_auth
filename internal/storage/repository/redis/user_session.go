@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
-	"micr_service_auth/internal/storage/models"
 	"micr_service_auth/internal/storage/connection_db"
+	"micr_service_auth/internal/storage/models"
+	"time"
 )
-
-
 
 func SetSession_InRedis(ctx context.Context, session models.Session) error {
 	ttl := time.Until(session.ExpiresAt)

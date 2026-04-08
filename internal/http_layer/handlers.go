@@ -3,54 +3,17 @@ package http_layer
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"micr_service_auth/internal/service"
 	"net/http"
-	"time"
-  "micr_service_auth/internal/storage/repository/redis"
-	"micr_service_auth/internal/storage/repository/postgres"
-	"micr_service_auth/internal/storage/models"
-	"github.com/google/uuid"
 )
 
-// смотрим куки session
-func checkSession(r *http.Request) (models.Session, bool) {
-	ctx := r.Context()
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		return models.Session{}, false
-	}
-
-	// Получаем JSON из Redis
-	sessionJSON, err := redis.GetSession_FromRedis(ctx, cookie.Value)
-	if err != nil {
-		log.Printf("Error getting session from Redis: %v", err)
-		return models.Session{}, false
-	}
-
-	if time.Now().After(sessionJSON.ExpiresAt) {
-		return models.Session{}, false
-	}
-
-	return sessionJSON, true
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
-// создаем куки
-func createSession(w http.ResponseWriter, username string, ctx context.Context) {
-	sessionID := generateSessionID()
-
-	//описываем новую сессию
-	session := models.Session{
-		ID:        sessionID,
-		Username:  username,
-		ExpiresAt: time.Now().Add(30 * time.Minute),
-		Role:      "user",
-	}
-
-	if err := redis.SetSession_InRedis(ctx, session); err != nil {
-		http.Error(w, "Internal error", 500)
-		return
-	}
-
+func createCookie(w http.ResponseWriter, username string, ctx context.Context) {
+	sessionID := service.CreateSession(username, ctx)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -61,12 +24,6 @@ func createSession(w http.ResponseWriter, username string, ctx context.Context) 
 		//Secure:   true,
 	}
 	http.SetCookie(w, cookie)
-}
-
-// генерация ID
-func generateSessionID() string {
-	newID := uuid.New().String()
-	return newID
 }
 
 // один обработчик ответов
@@ -97,12 +54,12 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//идентификация
-	if !postgres.IdentificationRepo(creds.Username, creds.Password) {
+	if !service.AuthenticateUser(creds.Username, creds.Password) {
 		jsonResponse(w, http.StatusUnauthorized, map[string]string{"error": "Invalid credentials"})
 		return
 	}
 	//создаем сессию
-	createSession(w, creds.Username, ctx)
+	service.CreateSession(creds.Username, ctx)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -112,7 +69,19 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 // ручка для авторизованных
 func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
-	session, ok := checkSession(r)
+	ctx := r.Context()
+
+	// Извлекаем куку "session_id" из запроса
+	cookie, err := r.Cookie("session_id")
+	if err != nil {
+		// Если куки нет в запросе, считаем пользователя неавторизованным
+		jsonResponse(w, http.StatusUnauthorized, map[string]string{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	session, ok := service.CheckSession(ctx, cookie.Value)
 	if !ok {
 		jsonResponse(w, http.StatusUnauthorized, map[string]string{
 			"error": "Unauthorized",
@@ -130,7 +99,7 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cookie, err := r.Cookie("session_id")
 	if err == nil {
-		redis.DeleteSession_FromRedis(ctx, cookie.Value)
+		service.DeleteSession(ctx, cookie.Value)
 	}
 
 	http.SetCookie(w, &http.Cookie{

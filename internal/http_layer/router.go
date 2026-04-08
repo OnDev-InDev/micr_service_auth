@@ -2,9 +2,7 @@ package http_layer
 
 import (
 	"net/http"
-
 )
-
 
 func Router() {
 	http.HandleFunc("/post/signin", AuthHandler)
