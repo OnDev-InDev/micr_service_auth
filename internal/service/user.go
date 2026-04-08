@@ -1,7 +1,7 @@
 package service
 
 import (
-	"micr_service_auth/internal/storage/repository/postgres"
+	"micr_service_auth/internal/storage/repository"
 )
 
 
