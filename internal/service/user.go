@@ -4,11 +4,17 @@ import (
 	"micr_service_auth/internal/storage/repository/postgres"
 )
 
+
+type Identification struct {
+	repo postgres.AuthRepository
+}
+
+
 // идентификация
-func IndetificationUser(username, password string) bool {
-	if !postgres.IdentificationRepo(username, password) {
-		return false
+func (s *Identification)IndetificationUser(username, password string) bool {
+	if s.repo.IdentificationRepo(username, password) {
+		return true
 	}
 
-	return true
+	return false
 }
