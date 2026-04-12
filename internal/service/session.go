@@ -4,11 +4,15 @@ import (
 	"context"
 	"log"
 	"micr_service_auth/internal/storage/models"
-	"micr_service_auth/internal/storage/repository/redis"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+
+type SessionService struct {
+	sessionRepo SessionRepository
+}
 
 // генерация ID
 func generateSessionID() string {
@@ -17,7 +21,7 @@ func generateSessionID() string {
 }
 
 // создаем сессию
-func CreateSession(username string, ctx context.Context) string {
+func (s *SessionService)CreateSession(username string, ctx context.Context) string {
 	sessionID := generateSessionID()
 
 	//описываем новую сессию
@@ -27,22 +31,21 @@ func CreateSession(username string, ctx context.Context) string {
 		ExpiresAt: time.Now().Add(30 * time.Minute),
 		Role:      "user",
 	}
-
-	if err := redis.SetSession_InRedis(ctx, session); err != nil {
+	if err := s.sessionRepo.CreateSessionRepo(session, ctx); err != nil {
 		//http.Error(w, "Internal error", 500)
 
 	}
 	return sessionID
 }
 
-func DeleteSession(ctx context.Context, value string) {
-	redis.DeleteSession_FromRedis(ctx, value)
+func (s *SessionService)DeleteSession(ctx context.Context, value string) {
+	s.sessionRepo.DeleteSessionRepo(ctx, value)
 }
 
 // смотрим куки session
-func CheckSession(ctx context.Context, value string) (models.Session, bool) {
+func (s *SessionService)CheckSession(ctx context.Context, value string) (models.Session, bool) {
 	// Получаем JSON из Redis
-	sessionJSON, err := redis.GetSession_FromRedis(ctx, value)
+	sessionJSON, err := s.sessionRepo.GetSessionRepo(ctx, value)
 	if err != nil {
 		log.Printf("Error getting session from Redis: %v", err)
 		return models.Session{}, false

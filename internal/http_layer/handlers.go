@@ -12,6 +12,21 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
+
+type Handler struct {
+	auth service.AuthRepository
+}
+
+
+// DI constructor
+func NewHandler(auth service.AuthServiceInterface) *Handler {
+	return &Handler{
+		auth: auth,
+	}
+}
+
+
+
 func createCookie(w http.ResponseWriter, username string, ctx context.Context) {
 	sessionID := service.CreateSession(username, ctx)
 	cookie := &http.Cookie{
@@ -34,7 +49,7 @@ func jsonResponse(w http.ResponseWriter, status int, data interface{}) {
 }
 
 // логинимся
-func AuthHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler)AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Use POST"})
 		return
@@ -54,7 +69,7 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//идентификация
-	if !service.AuthenticateUser(creds.Username, creds.Password) {
+	if !h.auth.AuthenticateUser(creds.Username, creds.Password) {
 		jsonResponse(w, http.StatusUnauthorized, map[string]string{"error": "Invalid credentials"})
 		return
 	}

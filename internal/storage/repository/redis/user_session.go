@@ -9,7 +9,13 @@ import (
 	"time"
 )
 
-func SetSession_InRedis(ctx context.Context, session models.Session) error {
+
+type RedisSessionRepo struct{}
+
+
+
+
+func (r *RedisSessionRepo)CreateSessionRepo(ctx context.Context, session models.Session) error {
 	ttl := time.Until(session.ExpiresAt)
 
 	data, err := json.Marshal(session)
@@ -26,14 +32,14 @@ func SetSession_InRedis(ctx context.Context, session models.Session) error {
 	return nil
 }
 
-func GetSession_FromRedis(ctx context.Context, sessionID string) (models.Session, error) {
+func (r *RedisSessionRepo)GetSessionRepo(ctx context.Context, sessionID string) (models.Session, error) {
 	var session models.Session
 
 	key := "session_id:" + sessionID
 
 	value, err := connection_db.RedisClient.Get(ctx, key).Result()
 	if err != nil {
-		fmt.Println("Error receiving ", err)
+		//fmt.Println("Error receiving ", err)
 		return session, err
 	}
 
@@ -42,23 +48,24 @@ func GetSession_FromRedis(ctx context.Context, sessionID string) (models.Session
 		return session, err
 	}
 
-	fmt.Println("Success receipt ")
+	//fmt.Println("Success receipt ")
 	return session, nil
 }
 
-func DeleteSession_FromRedis(ctx context.Context, sessionID string) error {
+func (r *RedisSessionRepo)DeleteSessionRepo(ctx context.Context, sessionID string) error {
 	key := "session_id:" + sessionID
 	deleteCount, err := connection_db.RedisClient.Del(ctx, key).Result()
 	if err != nil {
-		fmt.Println("Error delete", err)
+		//fmt.Println("Error delete", err)
 		return err
 	}
 
 	// значит у сессии истек срок хранения
 	if deleteCount == 0 {
-		fmt.Println("Session not found")
+		//fmt.Println("Session not found")
+		return err
 	}
 
-	fmt.Println("Success delete", deleteCount)
+	//fmt.Println("Success delete", deleteCount)
 	return nil
 }

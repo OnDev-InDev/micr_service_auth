@@ -1,14 +1,9 @@
 package postgres
 
-
-
 // что здесь писать - модель для юсера ?
-type PostgresAuthRepo struct {}
+type PostgresAuthRepo struct{}
 
-
-
-
-func (p *PostgresAuthRepo)IdentificationRepo(username, password string) bool {
+func (p *PostgresAuthRepo) IdentifyRepo(username, password string) bool {
 	userInit := map[string]string{"Alexey": "1234"}
 	userPassword := userInit[username]
 
