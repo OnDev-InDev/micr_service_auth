@@ -14,7 +14,7 @@ type Credentials struct {
 
 
 type Handler struct {
-	auth service.AuthRepository
+	auth service.AuthServiceInterface
 }
 
 
@@ -74,7 +74,7 @@ func (h *Handler)AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//создаем сессию
-	service.CreateSession(creds.Username, ctx)
+	createCookie(w, creds.Username, ctx)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,

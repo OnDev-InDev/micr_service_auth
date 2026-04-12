@@ -3,12 +3,12 @@ package service
 
 
 type AuthService struct {
-	authRepo AuthRepository
+	userRepo UserRepository
 }
 
-// идентификация
+// идентификация  - должен вернуть пароль мне например и я его уже здесь в бизнес логите сравню с тем что ввел пользователь 
 func (s *AuthService) AuthenticateUser(username, password string) bool {
-	if s.authRepo.IdentifyRepo(username, password) {
+	if s.userRepo.GetUser(username) {
 		return true
 	}
 

@@ -1,9 +1,8 @@
 package service
 
-import "context"
 
-type AuthRepository interface {
-	IdentifyRepo(username, password string) bool
+type UserRepository interface {
+	GetUser(username string) bool
 }	
 
 
