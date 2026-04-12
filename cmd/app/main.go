@@ -8,7 +8,17 @@ import (
 	"net/http"
 )
 
+
+type connDB struct {
+	connectionDB connection_db.ConnectionDB
+}
+
+
+
 func main() {
+
+
+
 	connection_db.ConnectionRedis(context.Background())
 	http_layer.Router()
 

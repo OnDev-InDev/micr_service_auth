@@ -8,9 +8,18 @@ import (
 	"github.com/joho/godotenv"
 )
 
+
+
+type connectionDB struct {
+
+}
+
+
+
+
 var db *gorm.DB
 
-func connection_postgres() {
+func (c *connectionDB)connection_postgres() {
 	load_env := godotenv.Load()
 	if load_env != nil {
 		fmt.Print(load_env)

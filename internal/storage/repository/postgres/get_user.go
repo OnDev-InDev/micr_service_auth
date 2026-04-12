@@ -2,10 +2,8 @@ package postgres
 
 
 
-
-type PostgresAuthRepo struct {
-
-}
+// что здесь писать - модель для юсера ?
+type PostgresAuthRepo struct {}
 
 
 
