@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-
 type SessionService struct {
 	sessionRepo SessionRepository
 }
@@ -21,7 +20,7 @@ func generateSessionID() string {
 }
 
 // создаем сессию
-func (s *SessionService)CreateSession(username string, ctx context.Context) string {
+func (s *SessionService) CreateSession(username string, ctx context.Context) string {
 	sessionID := generateSessionID()
 
 	//описываем новую сессию
@@ -38,12 +37,12 @@ func (s *SessionService)CreateSession(username string, ctx context.Context) stri
 	return sessionID
 }
 
-func (s *SessionService)DeleteSession(ctx context.Context, value string) {
+func (s *SessionService) DeleteSession(ctx context.Context, value string) {
 	s.sessionRepo.DeleteSessionRepo(ctx, value)
 }
 
 // смотрим куки session
-func (s *SessionService)CheckSession(ctx context.Context, value string) (models.Session, bool) {
+func (s *SessionService) CheckSession(ctx context.Context, value string) (models.Session, bool) {
 	// Получаем JSON из Redis
 	sessionJSON, err := s.sessionRepo.GetSessionRepo(ctx, value)
 	if err != nil {

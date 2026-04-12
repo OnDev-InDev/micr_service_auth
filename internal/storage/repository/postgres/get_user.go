@@ -1,7 +1,7 @@
 package postgres
 
 // что здесь писать - модель для юсера ?
-type PostgresAuthRepo struct{
+type PostgresAuthRepo struct {
 	db *sql.DB
 }
 

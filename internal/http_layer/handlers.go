@@ -12,23 +12,13 @@ type Credentials struct {
 	Password string `json:"password"`
 }
 
-
 type Handler struct {
-	auth service.AuthServiceInterface
+	session *service.SessionService
+	auth    *service.AuthService
 }
 
-
-// DI constructor
-func NewHandler(auth service.AuthServiceInterface) *Handler {
-	return &Handler{
-		auth: auth,
-	}
-}
-
-
-
-func createCookie(w http.ResponseWriter, username string, ctx context.Context) {
-	sessionID := service.CreateSession(username, ctx)
+func (h *Handler) createCookie(w http.ResponseWriter, username string, ctx context.Context) {
+	sessionID := h.session.CreateSession(username, ctx)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -49,7 +39,7 @@ func jsonResponse(w http.ResponseWriter, status int, data interface{}) {
 }
 
 // логинимся
-func (h *Handler)AuthHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Use POST"})
 		return
@@ -74,7 +64,7 @@ func (h *Handler)AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//создаем сессию
-	createCookie(w, creds.Username, ctx)
+	h.createCookie(w, creds.Username, ctx)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -83,7 +73,7 @@ func (h *Handler)AuthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // ручка для авторизованных
-func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Извлекаем куку "session_id" из запроса
@@ -96,7 +86,7 @@ func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, ok := service.CheckSession(ctx, cookie.Value)
+	session, ok := h.session.CheckSession(ctx, cookie.Value)
 	if !ok {
 		jsonResponse(w, http.StatusUnauthorized, map[string]string{
 			"error": "Unauthorized",
@@ -110,11 +100,11 @@ func ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cookie, err := r.Cookie("session_id")
 	if err == nil {
-		service.DeleteSession(ctx, cookie.Value)
+		h.session.DeleteSession(ctx, cookie.Value)
 	}
 
 	http.SetCookie(w, &http.Cookie{

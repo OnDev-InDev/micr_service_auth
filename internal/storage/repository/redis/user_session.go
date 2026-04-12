@@ -9,13 +9,9 @@ import (
 	"time"
 )
 
-
 type RedisSessionRepo struct{}
 
-
-
-
-func (r *RedisSessionRepo)CreateSessionRepo(ctx context.Context, session models.Session) error {
+func (r *RedisSessionRepo) CreateSessionRepo(ctx context.Context, session models.Session) error {
 	ttl := time.Until(session.ExpiresAt)
 
 	data, err := json.Marshal(session)
@@ -32,7 +28,7 @@ func (r *RedisSessionRepo)CreateSessionRepo(ctx context.Context, session models.
 	return nil
 }
 
-func (r *RedisSessionRepo)GetSessionRepo(ctx context.Context, sessionID string) (models.Session, error) {
+func (r *RedisSessionRepo) GetSessionRepo(ctx context.Context, sessionID string) (models.Session, error) {
 	var session models.Session
 
 	key := "session_id:" + sessionID
@@ -52,7 +48,7 @@ func (r *RedisSessionRepo)GetSessionRepo(ctx context.Context, sessionID string) 
 	return session, nil
 }
 
-func (r *RedisSessionRepo)DeleteSessionRepo(ctx context.Context, sessionID string) error {
+func (r *RedisSessionRepo) DeleteSessionRepo(ctx context.Context, sessionID string) error {
 	key := "session_id:" + sessionID
 	deleteCount, err := connection_db.RedisClient.Del(ctx, key).Result()
 	if err != nil {

@@ -8,7 +8,6 @@ import (
 	"net/http"
 )
 
-
 func main() {
 
 	connection_db.ConnectionRedis(context.Background())
