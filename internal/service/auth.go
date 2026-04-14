@@ -1,14 +1,29 @@
 package service
 
+import (
+	"fmt"
+	"golang.org/x/crypto/bcrypt"
+)
+
 type AuthService struct {
 	userRepo UserRepository
 }
 
-// идентификация  - должен вернуть пароль мне например и я его уже здесь в бизнес логите сравню с тем что ввел пользователь
-func (s *AuthService) AuthenticateUser(username, password string) bool {
-	if s.userRepo.GetUser(username) {
-		return true
+
+func (s *AuthService) AuthenticateUser(email, password string) error {
+	user, err := s.userRepo.GetEmail(email) 
+	if err != nil {
+		return fmt.Errorf("service AuthenticateUser: %w", err)
+	}
+	
+	err = bcrypt.CompareHashAndPassword(
+		[]byte(user.PasswordHash),
+		[]byte(password),
+	)
+
+	if err != nil {
+		return fmt.Errorf("Invalid credentials: %w", err)
 	}
 
-	return false
+	return nil
 }

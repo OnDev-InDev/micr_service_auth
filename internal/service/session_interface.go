@@ -6,7 +6,7 @@ import (
 )
 
 type SessionRepository interface {
-	CreateSessionRepo(session models.Session, ctx context.Context) error
+	CreateSessionRepo(ctx context.Context, session models.Session) error
 	GetSessionRepo(ctx context.Context, value string) (models.Session, error)
 	DeleteSessionRepo(ctx context.Context, value string)
 }

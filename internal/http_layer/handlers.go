@@ -8,7 +8,7 @@ import (
 )
 
 type Credentials struct {
-	Username string `json:"username"`
+	Email string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -17,8 +17,8 @@ type Handler struct {
 	auth    *service.AuthService
 }
 
-func (h *Handler) createCookie(w http.ResponseWriter, username string, ctx context.Context) {
-	sessionID := h.session.CreateSession(username, ctx)
+func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, email string) {
+	sessionID := h.session.CreateSession(ctx, email)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -53,18 +53,20 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if creds.Username == "" || creds.Password == "" {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Username and password are required"})
+	if creds.Email == "" || creds.Password == "" {
+		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Email and Password are required"})
 		return
 	}
 
 	//идентификация
-	if !h.auth.AuthenticateUser(creds.Username, creds.Password) {
-		jsonResponse(w, http.StatusUnauthorized, map[string]string{"error": "Invalid credentials"})
+	err := h.auth.AuthenticateUser(creds.Email, creds.Password) 
+	if err != nil {
+		jsonResponse(w, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 		return
-	}
+	}	
+
 	//создаем сессию
-	h.createCookie(w, creds.Username, ctx)
+	h.createCookie(ctx, w, creds.Email)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,

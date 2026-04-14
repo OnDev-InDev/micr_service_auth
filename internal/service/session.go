@@ -20,18 +20,17 @@ func generateSessionID() string {
 }
 
 // создаем сессию
-func (s *SessionService) CreateSession(username string, ctx context.Context) string {
+func (s *SessionService) CreateSession(ctx context.Context, email string) string {
 	sessionID := generateSessionID()
 
 	//описываем новую сессию
 	session := models.Session{
 		ID:        sessionID,
-		Username:  username,
 		ExpiresAt: time.Now().Add(30 * time.Minute),
 		Role:      "user",
 	}
-	if err := s.sessionRepo.CreateSessionRepo(session, ctx); err != nil {
-		//http.Error(w, "Internal error", 500)
+
+	if err := s.sessionRepo.CreateSessionRepo(ctx, session); err != nil {
 
 	}
 	return sessionID
