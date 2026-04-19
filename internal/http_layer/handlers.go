@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"micr_service_auth/internal/service"
+	service "micr_service_auth/internal/service/auth"
 	"net/http"
 )
 
 type Credentials struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -17,8 +18,8 @@ type Handler struct {
 	auth    *service.AuthService
 }
 
-func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, email string) {
-	sessionID := h.session.CreateSession(ctx, email)
+func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, userID string) {
+	sessionID := h.session.CreateSession(ctx, userID)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -31,17 +32,10 @@ func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, email
 	http.SetCookie(w, cookie)
 }
 
-// один обработчик ответов
-func jsonResponse(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
-}
-
 // логинимся
 func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "Use POST"})
+		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "use POST"})
 		return
 	}
 	//defer r.Body.Close()
@@ -49,24 +43,26 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
+		jsonResponse(w, http.StatusBadRequest, map[string]string{
+			"error": "invalid JSON body",
+		})
 		return
 	}
 
-	if creds.Email == "" || creds.Password == "" {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{"error": "Email and Password are required"})
-		return
+	input := service.LoginInput{
+		Email:    creds.Email,
+		Password: creds.Password,
 	}
 
 	//идентификация
-	err := h.auth.AuthenticateUser(creds.Email, creds.Password) 
+	userID, err := h.auth.AuthenticateUser(input)
 	if err != nil {
-		jsonResponse(w, http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
+		writeError(w, err)
 		return
-	}	
+	}
 
 	//создаем сессию
-	h.createCookie(ctx, w, creds.Email)
+	h.createCookie(ctx, w, userID)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -83,22 +79,20 @@ func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Если куки нет в запросе, считаем пользователя неавторизованным
 		jsonResponse(w, http.StatusUnauthorized, map[string]string{
-			"error": "Unauthorized",
+			"error": "unauthorized",
 		})
 		return
 	}
 
-	session, ok := h.session.CheckSession(ctx, cookie.Value)
-	if !ok {
-		jsonResponse(w, http.StatusUnauthorized, map[string]string{
-			"error": "Unauthorized",
-		})
+	ses, err := h.session.CheckSession(ctx, cookie.Value)
+	if err != nil {
+		writeError(w, err)
 		return
 	}
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
-		"success":  true,
-		"username": session.Username,
+		"success": true,
+		"role":    ses.Role,
 	})
 }
 

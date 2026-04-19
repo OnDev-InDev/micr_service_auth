@@ -2,12 +2,22 @@ package service
 
 import (
 	"context"
-	"log"
 	"micr_service_auth/internal/storage/models"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+
+
+
+type SessionRepository interface {
+	CreateSessionRepo(ctx context.Context, session models.Session) error
+	GetSessionRepo(ctx context.Context, value string) (models.Session, error)
+	DeleteSessionRepo(ctx context.Context, value string)
+}
+
+
 
 type SessionService struct {
 	sessionRepo SessionRepository
@@ -20,12 +30,13 @@ func generateSessionID() string {
 }
 
 // создаем сессию
-func (s *SessionService) CreateSession(ctx context.Context, email string) string {
+func (s *SessionService) CreateSession(ctx context.Context, userID string) string {
 	sessionID := generateSessionID()
 
 	//описываем новую сессию
 	session := models.Session{
 		ID:        sessionID,
+		UserID:    userID,
 		ExpiresAt: time.Now().Add(30 * time.Minute),
 		Role:      "user",
 	}
@@ -41,17 +52,16 @@ func (s *SessionService) DeleteSession(ctx context.Context, value string) {
 }
 
 // смотрим куки session
-func (s *SessionService) CheckSession(ctx context.Context, value string) (models.Session, bool) {
+func (s *SessionService) CheckSession(ctx context.Context, value string) (models.Session, error) {
 	// Получаем JSON из Redis
 	sessionJSON, err := s.sessionRepo.GetSessionRepo(ctx, value)
 	if err != nil {
-		log.Printf("Error getting session from Redis: %v", err)
-		return models.Session{}, false
+		return models.Session{}, err
 	}
 
 	if time.Now().After(sessionJSON.ExpiresAt) {
-		return models.Session{}, false
+		return models.Session{}, err
 	}
 
-	return sessionJSON, true
+	return sessionJSON, nil
 }

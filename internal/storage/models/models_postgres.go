@@ -1,13 +1,12 @@
 package models
 
-
 import (
 	"time"
 )
 
 type User struct {
-	ID              uint
-	Email           string     `gorm:  "primaryKey"`
-	PasswordHash    string     `gorm:  "uniqueIndex;not null"`
-  Created_At      time.Time  `gorm:  "not null"`
+	ID           string      `gorm:  "primaryKey"`
+	Email        string    `gorm:  "uniqueIndex;not null"`
+	PasswordHash string    `gorm:  "not null"`
+	Created_At   time.Time `gorm:  "not null"`
 }
