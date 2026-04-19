@@ -3,10 +3,15 @@ package http_layer
 import (
 	"context"
 	"encoding/json"
-	"micr_service_auth/internal/service"
 	service "micr_service_auth/internal/service/auth"
+	"micr_service_auth/internal/usecase"
 	"net/http"
 )
+
+
+
+
+
 
 type Credentials struct {
 	Email    string `json:"email"`
@@ -14,12 +19,18 @@ type Credentials struct {
 }
 
 type Handler struct {
-	session *service.SessionService
-	auth    *service.AuthService
+	usecaseAuth    *usecase.AuthUsecase
+	//usecaseSession *usecase.ValidateSession
 }
 
-func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, userID string) {
-	sessionID := h.session.CreateSession(ctx, userID)
+
+
+
+
+
+
+
+func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessionID string) {
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -49,20 +60,20 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input := service.LoginInput{
+	input := usecase.LoginInput{
 		Email:    creds.Email,
 		Password: creds.Password,
 	}
 
 	//идентификация
-	userID, err := h.auth.AuthenticateUser(input)
+	sessionID, err := h.usecaseAuth.Login(ctx, input)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 
 	//создаем сессию
-	h.createCookie(ctx, w, userID)
+	h.createCookie(ctx, w, sessionID)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -84,7 +95,7 @@ func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ses, err := h.session.CheckSession(ctx, cookie.Value)
+	ses, err := h.usecaseAuth.ValidateSession(ctx, cookie.Value)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -100,7 +111,7 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	cookie, err := r.Cookie("session_id")
 	if err == nil {
-		h.session.DeleteSession(ctx, cookie.Value)
+		h.usecaseAuth.Logout(ctx, cookie.Value)
 	}
 
 	http.SetCookie(w, &http.Cookie{

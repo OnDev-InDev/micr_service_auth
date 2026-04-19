@@ -1,10 +1,9 @@
-package service
+package session
 
 import (
 	"context"
-	"micr_service_auth/internal/storage/models"
 	"time"
-
+  "micr_service_auth/internal/domain"
 	"github.com/google/uuid"
 )
 
@@ -12,8 +11,8 @@ import (
 
 
 type SessionRepository interface {
-	CreateSessionRepo(ctx context.Context, session models.Session) error
-	GetSessionRepo(ctx context.Context, value string) (models.Session, error)
+	CreateSessionRepo(ctx context.Context, session domain.Session) error
+	GetSessionRepo(ctx context.Context, value string) (domain.Session, error)
 	DeleteSessionRepo(ctx context.Context, value string)
 }
 
@@ -23,6 +22,7 @@ type SessionService struct {
 	sessionRepo SessionRepository
 }
 
+
 // генерация ID
 func generateSessionID() string {
 	newID := uuid.New().String()
@@ -30,21 +30,21 @@ func generateSessionID() string {
 }
 
 // создаем сессию
-func (s *SessionService) CreateSession(ctx context.Context, userID string) string {
+func (s *SessionService) CreateSession(ctx context.Context, userID string) (string, error) {
 	sessionID := generateSessionID()
 
 	//описываем новую сессию
-	session := models.Session{
+	session := domain.Session{
 		ID:        sessionID,
 		UserID:    userID,
-		ExpiresAt: time.Now().Add(30 * time.Minute),
 		Role:      "user",
+		ExpiresAt: time.Now().Add(30 * time.Minute),
 	}
 
 	if err := s.sessionRepo.CreateSessionRepo(ctx, session); err != nil {
-
+    return "", err
 	}
-	return sessionID
+	return sessionID, nil
 }
 
 func (s *SessionService) DeleteSession(ctx context.Context, value string) {
@@ -52,15 +52,15 @@ func (s *SessionService) DeleteSession(ctx context.Context, value string) {
 }
 
 // смотрим куки session
-func (s *SessionService) CheckSession(ctx context.Context, value string) (models.Session, error) {
+func (s *SessionService) CheckSession(ctx context.Context, value string) (domain.Session, error) {
 	// Получаем JSON из Redis
 	sessionJSON, err := s.sessionRepo.GetSessionRepo(ctx, value)
 	if err != nil {
-		return models.Session{}, err
+		return domain.Session{}, ErrSessionNotFound
 	}
 
 	if time.Now().After(sessionJSON.ExpiresAt) {
-		return models.Session{}, err
+		return domain.Session{}, ErrSessionExpired
 	}
 
 	return sessionJSON, nil

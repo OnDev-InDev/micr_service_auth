@@ -1,7 +1,7 @@
 package auth
 
 import (
-  "micr_service_auth/internal/storage/models"
+	"micr_service_auth/internal/domain"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -9,7 +9,7 @@ import (
 
 
 type UserRepository interface {
-	GetEmail(email string) (models.User, error)
+	GetUser(email string) (domain.User, error)
 }
 
 
@@ -18,19 +18,16 @@ type AuthService struct {
 	userRepo UserRepository
 }
 
-func (s *AuthService) AuthenticateUser(input LoginInput) (string, error) {
-  if err := input.Validate(); err != nil { 
-		return "", err 
-	}
-
-	user, err := s.userRepo.GetEmail(input.Email)
+func (s *AuthService) AuthenticateUser(email, password string) (string, error) {
+  
+	user, err := s.userRepo.GetUser(email)
 	if err != nil {
 		return "", ErrInvalidCredentials
 	}
 
 	err = bcrypt.CompareHashAndPassword(
 		[]byte(user.PasswordHash),
-		[]byte(input.Password),
+		[]byte(password),
 	)
 
 	if err != nil {
