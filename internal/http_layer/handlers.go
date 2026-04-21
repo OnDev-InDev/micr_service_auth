@@ -3,32 +3,31 @@ package http_layer
 import (
 	"context"
 	"encoding/json"
-	service "micr_service_auth/internal/service/auth"
+	"micr_service_auth/internal/domain"
 	"micr_service_auth/internal/usecase"
 	"net/http"
 )
-
-
-
-
-
 
 type Credentials struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
-type Handler struct {
-	usecaseAuth    *usecase.AuthUsecase
-	//usecaseSession *usecase.ValidateSession
+type AuthUsecase interface {
+	Login(ctx context.Context, input usecase.LoginInput) (string, error)
+	GetSession(ctx context.Context, sessionID string) (domain.Session, error)
+	Logout(ctx context.Context, sessionID string) error
 }
 
+type Handler struct {
+	usecaseAuth AuthUsecase
+}
 
-
-
-
-
-
+func NewHandler(usecaseAuth AuthUsecase) *Handler {
+	return &Handler{
+		usecaseAuth: usecaseAuth,
+	}
+}
 
 func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessionID string) {
 	cookie := &http.Cookie{
@@ -95,7 +94,7 @@ func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ses, err := h.usecaseAuth.ValidateSession(ctx, cookie.Value)
+	ses, err := h.usecaseAuth.GetSession(ctx, cookie.Value)
 	if err != nil {
 		writeError(w, err)
 		return

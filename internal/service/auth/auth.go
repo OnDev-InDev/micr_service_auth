@@ -6,20 +6,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-
-
 type UserRepository interface {
 	GetUser(email string) (domain.User, error)
 }
-
-
 
 type AuthService struct {
 	userRepo UserRepository
 }
 
+func NewAuthService(userRepo UserRepository) *AuthService {
+	return &AuthService{
+		userRepo: userRepo,
+	}
+}
+
 func (s *AuthService) AuthenticateUser(email, password string) (string, error) {
-  
+
 	user, err := s.userRepo.GetUser(email)
 	if err != nil {
 		return "", ErrInvalidCredentials

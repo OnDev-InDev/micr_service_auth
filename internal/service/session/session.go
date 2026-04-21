@@ -2,13 +2,11 @@ package session
 
 import (
 	"context"
+	"micr_service_auth/internal/domain"
 	"time"
-  "micr_service_auth/internal/domain"
+
 	"github.com/google/uuid"
 )
-
-
-
 
 type SessionRepository interface {
 	CreateSessionRepo(ctx context.Context, session domain.Session) error
@@ -16,12 +14,15 @@ type SessionRepository interface {
 	DeleteSessionRepo(ctx context.Context, value string)
 }
 
-
-
 type SessionService struct {
 	sessionRepo SessionRepository
 }
 
+func NewSessionService(sessionRepo SessionRepository) *SessionService {
+	return &SessionService{
+		sessionRepo: sessionRepo,
+	}
+}
 
 // генерация ID
 func generateSessionID() string {
@@ -42,13 +43,14 @@ func (s *SessionService) CreateSession(ctx context.Context, userID string) (stri
 	}
 
 	if err := s.sessionRepo.CreateSessionRepo(ctx, session); err != nil {
-    return "", err
+		return "", err
 	}
 	return sessionID, nil
 }
 
-func (s *SessionService) DeleteSession(ctx context.Context, value string) {
+func (s *SessionService) DeleteSession(ctx context.Context, value string) error {
 	s.sessionRepo.DeleteSessionRepo(ctx, value)
+	return nil
 }
 
 // смотрим куки session

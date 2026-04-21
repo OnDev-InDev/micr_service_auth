@@ -4,8 +4,21 @@ import (
 	"net/http"
 )
 
-func Router() {
-	http.HandleFunc("/post/signin", AuthHandler)
-	http.HandleFunc("/protected", ProtectedHandler)
-	http.HandleFunc("/post/logout", LogoutHandler)
+
+type Server struct {
+	router *http.ServeMux
+}
+
+func NewServer(h *Handler) *Server {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/post/signin", h.AuthHandler)
+	mux.HandleFunc("/protected", h.ProtectedHandler)
+	mux.HandleFunc("/post/logout", h.LogoutHandler)
+
+	return &Server{router: mux}
+}
+
+func (s *Server) Router() http.Handler {
+	return s.router
 }

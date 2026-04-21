@@ -7,11 +7,17 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-type PostgresAuthRepo struct {
+type PostgresRepo struct {
 	db *gorm.DB
 }
 
-func (p *PostgresAuthRepo) GetUser(email string) (domain.User, error) {
+func NewPostgresRepo(db *gorm.DB) *PostgresRepo {
+	return &PostgresRepo{
+		db: db,
+	}
+}
+
+func (p *PostgresRepo) GetUser(email string) (domain.User, error) {
 	var userModel UserModel
 
 	err := p.db.Where("email = ?", email).First(&userModel).Error
