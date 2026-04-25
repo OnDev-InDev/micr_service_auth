@@ -6,12 +6,6 @@ import (
 	"net/http"
 )
 
-
-
-
-
-
-
 func main() {
 
 	application, err := app.Init()

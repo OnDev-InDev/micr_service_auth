@@ -3,6 +3,7 @@ package session
 import (
 	"context"
 	"micr_service_auth/internal/domain"
+	"micr_service_auth/internal/errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -58,11 +59,11 @@ func (s *SessionService) CheckSession(ctx context.Context, value string) (domain
 	// Получаем JSON из Redis
 	sessionJSON, err := s.sessionRepo.GetSessionRepo(ctx, value)
 	if err != nil {
-		return domain.Session{}, ErrSessionNotFound
+		return domain.Session{}, err
 	}
 
 	if time.Now().After(sessionJSON.ExpiresAt) {
-		return domain.Session{}, ErrSessionExpired
+		return domain.Session{}, errors.New(errors.CodeSessionExpired, "session expired")
 	}
 
 	return sessionJSON, nil

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"micr_service_auth/internal/domain"
+	"micr_service_auth/internal/errors"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -24,7 +25,7 @@ func (s *AuthService) AuthenticateUser(email, password string) (string, error) {
 
 	user, err := s.userRepo.GetUser(email)
 	if err != nil {
-		return "", ErrInvalidCredentials
+		return "", err
 	}
 
 	err = bcrypt.CompareHashAndPassword(
@@ -33,7 +34,7 @@ func (s *AuthService) AuthenticateUser(email, password string) (string, error) {
 	)
 
 	if err != nil {
-		return "", ErrInvalidCredentials
+		return "", errors.New(errors.CodeInvalidCredentials, "invalid credentials")
 	}
 
 	return user.ID, nil

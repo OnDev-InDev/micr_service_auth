@@ -3,10 +3,8 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"micr_service_auth/internal/domain"
-	"micr_service_auth/internal/service/session"
+	"micr_service_auth/internal/errors"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -32,12 +30,12 @@ func (r *RedisSessionRepo) CreateSessionRepo(ctx context.Context, s domain.Sessi
 
 	data, err := json.Marshal(s)
 	if err != nil {
-		return fmt.Errorf("marshal session: %w", err)
+		return errors.Wrap(errors.CodeInternal, "marshal session", err)
 	}
 
 	err = r.client.Set(ctx, key, data, ttl).Err()
 	if err != nil {
-		return fmt.Errorf("redis set session: %w", err)
+		return errors.Wrap(errors.CodeInternal, "redis set session", err)
 	}
 	return nil
 }
@@ -46,25 +44,25 @@ func (r *RedisSessionRepo) GetSessionRepo(ctx context.Context, sessionID string)
 	var ses domain.Session
 
 	if sessionID == "" {
-		return ses, fmt.Errorf("empty session id")
+		return ses, errors.New(errors.CodeValidationError, "empty session id")
 	}
 
 	key := "session_id:" + sessionID
 
 	value, err := r.client.Get(ctx, key).Result()
 	if err != nil {
-		// ключа нет — это нормальная ситуация
-		if errors.Is(err, redis.Nil) {
-			return ses, session.ErrSessionNotFound
+		// ключа нет
+		if err == redis.Nil {
+			return ses, errors.New(errors.CodeSessionNotFound, "session not found")
 		}
 
 		// реальная ошибка Redis
-		return ses, fmt.Errorf("redis get failed for key %s: %w", key, err)
+		return ses, errors.Wrap(errors.CodeInternal, "redis get failed", err)
 	}
 
 	// парсим JSON
 	if err := json.Unmarshal([]byte(value), &ses); err != nil {
-		return ses, fmt.Errorf("failed to unmarshal session (key %s): %w", key, err)
+		return ses, errors.Wrap(errors.CodeInternal, "unmarshal session", err)
 	}
 
 	return ses, nil
@@ -72,18 +70,9 @@ func (r *RedisSessionRepo) GetSessionRepo(ctx context.Context, sessionID string)
 
 func (r *RedisSessionRepo) DeleteSessionRepo(ctx context.Context, sessionID string) error {
 	key := "session_id:" + sessionID
-	deleteCount, err := r.client.Del(ctx, key).Result()
+	err := r.client.Del(ctx, key).Err()
 	if err != nil {
-		//fmt.Println("Error delete", err)
-		return err
+		return errors.Wrap(errors.CodeInternal, "delete session failed", err)
 	}
-
-	// значит у сессии истек срок хранения
-	if deleteCount == 0 {
-		//fmt.Println("Session not found")
-		return err
-	}
-
-	//fmt.Println("Success delete", deleteCount)
 	return nil
 }

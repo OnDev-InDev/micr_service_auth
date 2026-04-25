@@ -1,8 +1,8 @@
 package postgres
 
 import (
-	"fmt"
 	"micr_service_auth/internal/domain"
+	"micr_service_auth/internal/errors"
 
 	"github.com/jinzhu/gorm"
 )
@@ -22,7 +22,11 @@ func (p *PostgresRepo) GetUser(email string) (domain.User, error) {
 
 	err := p.db.Where("email = ?", email).First(&userModel).Error
 	if err != nil {
-		return domain.User{}, fmt.Errorf("repo GetUser: %w", err)
+
+		if err == gorm.ErrRecordNotFound {
+			return domain.User{}, errors.New(errors.CodeInvalidCredentials, "get user failed")
+		}
+		return domain.User{}, errors.Wrap(errors.CodeInternal, "db error", err)
 	}
 
 	return toDomain(userModel), nil

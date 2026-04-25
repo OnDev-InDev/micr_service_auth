@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"micr_service_auth/internal/domain"
+	"micr_service_auth/internal/errors"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
@@ -50,7 +51,7 @@ func NewUsecase(authService AuthService, sessionService SessionService) *AuthUse
 func (uc *AuthUsecase) Login(ctx context.Context, input LoginInput) (string, error) {
 
 	if err := input.Validate(); err != nil {
-		return "", err
+		return "", errors.New(errors.CodeValidationError, "invalid input")
 	}
 
 	// 1. идентификация / авторизация

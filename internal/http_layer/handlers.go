@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"micr_service_auth/internal/domain"
+	"micr_service_auth/internal/errors"
 	"micr_service_auth/internal/usecase"
 	"net/http"
 )
@@ -45,7 +46,7 @@ func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessi
 // логинимся
 func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		jsonResponse(w, http.StatusMethodNotAllowed, map[string]string{"error": "use POST"})
+		writeError(w, errors.New(errors.CodeValidationError, "user Post"))
 		return
 	}
 	//defer r.Body.Close()
@@ -53,9 +54,7 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		jsonResponse(w, http.StatusBadRequest, map[string]string{
-			"error": "invalid JSON body",
-		})
+		writeError(w, errors.New(errors.CodeValidationError, "invalid JSON body"))
 		return
 	}
 
@@ -88,9 +87,7 @@ func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session_id")
 	if err != nil {
 		// Если куки нет в запросе, считаем пользователя неавторизованным
-		jsonResponse(w, http.StatusUnauthorized, map[string]string{
-			"error": "unauthorized",
-		})
+		writeError(w, errors.New(errors.CodeInvalidCredentials, "unauthorized"))
 		return
 	}
 
@@ -108,9 +105,12 @@ func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	cookie, err := r.Cookie("session_id")
-	if err == nil {
-		h.usecaseAuth.Logout(ctx, cookie.Value)
+	cookie, _ := r.Cookie("session_id")
+	if cookie != nil {
+		if err := h.usecaseAuth.Logout(ctx, cookie.Value); err != nil {
+			writeError(w, err)
+			return
+		}
 	}
 
 	http.SetCookie(w, &http.Cookie{
