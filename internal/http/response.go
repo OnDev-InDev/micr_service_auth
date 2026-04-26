@@ -1,4 +1,4 @@
-package http_layer
+package http
 
 import (
 	"encoding/json"

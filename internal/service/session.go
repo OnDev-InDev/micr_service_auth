@@ -12,7 +12,7 @@ import (
 type SessionRepository interface {
 	CreateSessionRepo(ctx context.Context, session domain.Session) error
 	GetSessionRepo(ctx context.Context, value string) (domain.Session, error)
-	DeleteSessionRepo(ctx context.Context, value string)
+	DeleteSessionRepo(ctx context.Context, value string) error
 }
 
 type SessionService struct {

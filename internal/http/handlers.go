@@ -1,4 +1,4 @@
-package http_layer
+package http
 
 import (
 	"context"
@@ -81,25 +81,14 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 // ручка для авторизованных
 func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
 
-	// Извлекаем куку "session_id" из запроса
-	cookie, err := r.Cookie("session_id")
-	if err != nil {
-		// Если куки нет в запросе, считаем пользователя неавторизованным
-		writeError(w, errors.New(errors.CodeInvalidCredentials, "unauthorized"))
-		return
-	}
-
-	ses, err := h.usecaseAuth.GetSession(ctx, cookie.Value)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
+	userID, _ := r.Context().Value(UserIDKey).(string)
+	role, _ := r.Context().Value(RoleKey).(string)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
-		"role":    ses.Role,
+		"user_id": userID,
+		"role":    role,
 	})
 }
 

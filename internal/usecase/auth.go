@@ -81,6 +81,5 @@ func (uc *AuthUsecase) GetSession(ctx context.Context, sessionID string) (domain
 }
 
 func (uc *AuthUsecase) Logout(ctx context.Context, sessionID string) error {
-	uc.sessionService.DeleteSession(ctx, sessionID)
-	return nil
+	return uc.sessionService.DeleteSession(ctx, sessionID)
 }

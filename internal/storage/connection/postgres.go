@@ -1,13 +1,16 @@
-package conn_postgres
+package connection
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/jinzhu/gorm"
+	_ "github.com/lib/pq"
+
+	"micr_service_auth/internal/config"
 )
 
-func NewPostgresDB(cfg Config) (*gorm.DB, error) {
+func NewPostgresDB(cfg config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
 		cfg.DBHost,
