@@ -2,21 +2,19 @@ package http
 
 import (
 	"net/http"
+  stderrs "errors"
 
-	"micr_service_auth/internal/errors"
+	appErrors "micr_service_auth/internal/errors"
 )
 
 func writeError(w http.ResponseWriter, err error) {
+	var appErr *appErrors.AppError
 
-	appErr, ok := err.(*errors.AppError)
-	if !ok {
-		jsonResponse(w, http.StatusInternalServerError, map[string]any{
-			"error": map[string]string{
-				"code":    string(errors.CodeInternal),
-				"message": "internal server error",
-			},
-		})
-		return
+	if !stderrs.As(err, &appErr) {
+		appErr = &appErrors.AppError{
+			Code:    appErrors.CodeInternal,
+			Message: "internal server error",
+		}
 	}
 
 	status := appErr.Code.HTTPStatus()

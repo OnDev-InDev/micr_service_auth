@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -32,7 +33,10 @@ func NewPostgresDB(cfg config.Config) (*gorm.DB, error) {
 		sqlDB.SetMaxIdleConns(10)
 		sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
-		if err := sqlDB.Ping(); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		if err := sqlDB.PingContext(ctx); err != nil {
 			return nil, fmt.Errorf("postgres ping failed: %w", err)
 		}
 	}

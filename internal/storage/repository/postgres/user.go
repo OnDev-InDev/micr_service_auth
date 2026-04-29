@@ -17,16 +17,17 @@ func NewPostgresRepo(db *gorm.DB) *PostgresRepo {
 	}
 }
 
-func (p *PostgresRepo) GetUser(email string) (domain.User, error) {
+func (p *PostgresRepo) Get(email string) (domain.User, error) {
 	var userModel UserModel
 
 	err := p.db.Where("email = ?", email).First(&userModel).Error
 	if err != nil {
 
 		if err == gorm.ErrRecordNotFound {
-			return domain.User{}, errors.New(errors.CodeInvalidCredentials, "get user failed")
+			return domain.User{}, errors.Wrap(errors.ErrDB, "user lookup failed", err)
 		}
-		return domain.User{}, errors.Wrap(errors.CodeInternal, "db error", err)
+
+		return domain.User{}, errors.Wrap(errors.ErrDB, "db error", err)
 	}
 
 	return toDomain(userModel), nil

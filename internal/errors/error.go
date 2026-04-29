@@ -12,7 +12,19 @@ const (
 	CodeSessionNotFound    Code = "SESSION_NOT_FOUND"
 	CodeSessionExpired     Code = "SESSION_EXPIRED"
 	CodeValidationError    Code = "VALIDATION_ERROR"
-	CodeInternal           Code = "INTERNAL_ERROR"
+	CodeUnauthorized       Code = "UNAUTHORIZED"
+	CodeForbidden          Code = "FORBIDDEN"
+)
+
+const (
+	ErrDB    Code = "DB_ERROR"
+	ErrJSON  Code = "JSON_ERROR"
+)
+
+const (
+	CodeMethodNotAllowed Code = "METHOD_NOT_ALLOWED"
+	CodeBadRequest       Code = "BAD_REQUEST"
+	CodeInternal         Code = "INTERNAL SERVER"
 )
 
 type AppError struct {
@@ -21,6 +33,8 @@ type AppError struct {
 	Err     error
 }
 
+
+// метод реализующий интерфейс 
 func (e *AppError) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("%s: %s: %v", e.Code, e.Message, e.Err)
@@ -47,16 +61,24 @@ func Wrap(code Code, msg string, err error) *AppError {
 	}
 }
 
+// маппинг
 func (c Code) HTTPStatus() int {
 	switch c {
 
 	case CodeInvalidCredentials,
 		CodeSessionNotFound,
-		CodeSessionExpired:
+		CodeSessionExpired,
+		CodeUnauthorized:
 		return http.StatusUnauthorized
+
+	case CodeForbidden:
+		return http.StatusForbidden
 
 	case CodeValidationError:
 		return http.StatusBadRequest
+
+	case CodeMethodNotAllowed:
+		return http.StatusMethodNotAllowed
 
 	default:
 		return http.StatusInternalServerError

@@ -3,53 +3,67 @@ package app
 import (
 	"micr_service_auth/internal/config"
 	"micr_service_auth/internal/http"
-	"micr_service_auth/internal/service/auth"
-	"micr_service_auth/internal/service/session"
 	"micr_service_auth/internal/storage/connection"
 	"micr_service_auth/internal/storage/repository/postgres"
 	"micr_service_auth/internal/storage/repository/redis"
 	"micr_service_auth/internal/usecase"
 
 	"github.com/jinzhu/gorm"
+	redisClient "github.com/redis/go-redis/v9"
 )
 
 type App struct {
-	DB      *gorm.DB
-	Usecase *usecase.AuthUsecase
-	Server  *http.Server
+	DB          *gorm.DB
+	RedisClient *redisClient.Client
+	Router      *http.Router
 }
 
-func Init() (*App, error) {
-
+func Run() (*App, error) {
 	cfg := config.Load()
 
+	// --- Postgres ---
 	db, err := connection.NewPostgresDB(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	redisClient, err := connection.NewRedisClient()
+	// --- Redis ---
+	rdb, err := connection.NewRedisClient()
 	if err != nil {
 		return nil, err
 	}
 
+	// --- Repos ---
 	userRepo := postgres.NewPostgresRepo(db)
-	sessionRepo := redis.NewRedisSessionRepo(redisClient)
+	sessionRepo := redis.NewRedisSessionRepo(rdb)
 
-	authService := auth.NewAuthService(userRepo)
-	sessionService := session.NewSessionService(sessionRepo)
+	// --- Services ---
+	//authService := service.NewAuthService(userRepo)
+	//sessionService := service.NewSessionService(sessionRepo)
 
-	uc := usecase.NewUsecase(authService, sessionService)
+	// --- Usecase ---
+	uc := usecase.NewUsecase(userRepo, sessionRepo)
 
+	// --- HTTP layer ---
 	handler := http.NewHandler(uc)
-
 	authMiddleware := http.NewAuthMiddleware(uc)
 
-	server := http.NewServer(handler, authMiddleware)
+	router := http.NewRouter(handler, authMiddleware)
 
 	return &App{
-		DB:      db,
-		Usecase: uc,
-		Server:  server,
+		DB:          db,
+		RedisClient: rdb,
+		Router:      router,
 	}, nil
+}
+
+// Shutdown 
+func (a *App) Shutdown() error {
+	if sqlDB := a.DB.DB(); sqlDB != nil {
+		if err := sqlDB.Close(); err != nil {
+			return err
+		}
+	}
+
+	return a.RedisClient.Close()
 }

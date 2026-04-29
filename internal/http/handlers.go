@@ -7,6 +7,7 @@ import (
 	"micr_service_auth/internal/errors"
 	"micr_service_auth/internal/usecase"
 	"net/http"
+	"time"
 )
 
 type Credentials struct {
@@ -16,7 +17,6 @@ type Credentials struct {
 
 type AuthUsecase interface {
 	Login(ctx context.Context, input usecase.LoginInput) (string, error)
-	GetSession(ctx context.Context, sessionID string) (domain.Session, error)
 	Logout(ctx context.Context, sessionID string) error
 }
 
@@ -37,7 +37,7 @@ func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessi
 		Path:     "/",
 		HttpOnly: true,                    //защита от XSS
 		SameSite: http.SameSiteStrictMode, //защита от CSRF
-		MaxAge:   1800,                    //30 мин
+		MaxAge:   int((30 * time.Minute).Seconds()),                    //30 мин
 		//Secure:   true,
 	}
 	http.SetCookie(w, cookie)
@@ -46,7 +46,7 @@ func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessi
 // логинимся
 func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeError(w, errors.New(errors.CodeValidationError, "user Post"))
+		writeError(w, errors.New(errors.CodeMethodNotAllowed, "method not allowed"))
 		return
 	}
 	//defer r.Body.Close()
@@ -54,7 +54,7 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		writeError(w, errors.New(errors.CodeValidationError, "invalid JSON body"))
+		writeError(w, errors.New(errors.CodeValidationError, "invalid request body"))
 		return
 	}
 
