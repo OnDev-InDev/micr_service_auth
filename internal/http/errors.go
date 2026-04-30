@@ -1,21 +1,31 @@
 package http
 
 import (
+	stderrs "errors"
+	"log"
 	"net/http"
-  stderrs "errors"
 
 	appErrors "micr_service_auth/internal/errors"
 )
 
-func writeError(w http.ResponseWriter, err error) {
+func writeError(w http.ResponseWriter, r *http.Request, err error) {
 	var appErr *appErrors.AppError
 
 	if !stderrs.As(err, &appErr) {
+		// если не признаем ошибку, то маскируем под это
 		appErr = &appErrors.AppError{
 			Code:    appErrors.CodeInternal,
 			Message: "internal server error",
 		}
 	}
+
+	requestID, _ := r.Context().Value(RequestIDKey).(string)
+
+	log.Printf(
+		"request_id=%s error=%v",
+		requestID,
+		err,
+	)
 
 	status := appErr.Code.HTTPStatus()
 

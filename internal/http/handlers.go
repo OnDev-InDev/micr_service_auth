@@ -3,7 +3,6 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"micr_service_auth/internal/domain"
 	"micr_service_auth/internal/errors"
 	"micr_service_auth/internal/usecase"
 	"net/http"
@@ -35,9 +34,9 @@ func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessi
 		Name:     "session_id",
 		Value:    sessionID,
 		Path:     "/",
-		HttpOnly: true,                    //защита от XSS
-		SameSite: http.SameSiteStrictMode, //защита от CSRF
-		MaxAge:   int((30 * time.Minute).Seconds()),                    //30 мин
+		HttpOnly: true,                              //защита от XSS
+		SameSite: http.SameSiteStrictMode,           //защита от CSRF
+		MaxAge:   int((30 * time.Minute).Seconds()), //30 мин
 		//Secure:   true,
 	}
 	http.SetCookie(w, cookie)
@@ -46,7 +45,7 @@ func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessi
 // логинимся
 func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeError(w, errors.New(errors.CodeMethodNotAllowed, "method not allowed"))
+		writeError(w, r, errors.New(errors.CodeMethodNotAllowed, "method not allowed"))
 		return
 	}
 	//defer r.Body.Close()
@@ -54,7 +53,7 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	var creds Credentials
 
 	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		writeError(w, errors.New(errors.CodeValidationError, "invalid request body"))
+		writeError(w, r, errors.New(errors.CodeValidationError, "invalid request body"))
 		return
 	}
 
@@ -66,7 +65,7 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	//идентификация
 	sessionID, err := h.usecaseAuth.Login(ctx, input)
 	if err != nil {
-		writeError(w, err)
+		writeError(w, r, err)
 		return
 	}
 
@@ -97,7 +96,7 @@ func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	cookie, _ := r.Cookie("session_id")
 	if cookie != nil {
 		if err := h.usecaseAuth.Logout(ctx, cookie.Value); err != nil {
-			writeError(w, err)
+			writeError(w, r, err)
 			return
 		}
 	}

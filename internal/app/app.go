@@ -57,7 +57,7 @@ func Run() (*App, error) {
 	}, nil
 }
 
-// Shutdown 
+// Shutdown
 func (a *App) Shutdown() error {
 	if sqlDB := a.DB.DB(); sqlDB != nil {
 		if err := sqlDB.Close(); err != nil {

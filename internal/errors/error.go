@@ -17,14 +17,14 @@ const (
 )
 
 const (
-	ErrDB    Code = "DB_ERROR"
-	ErrJSON  Code = "JSON_ERROR"
+	ErrDB   Code = "DB_ERROR"
+	ErrJSON Code = "JSON_ERROR"
 )
 
 const (
 	CodeMethodNotAllowed Code = "METHOD_NOT_ALLOWED"
 	CodeBadRequest       Code = "BAD_REQUEST"
-	CodeInternal         Code = "INTERNAL SERVER"
+	CodeInternal         Code = "INTERNAL_SERVER"
 )
 
 type AppError struct {
@@ -33,8 +33,7 @@ type AppError struct {
 	Err     error
 }
 
-
-// метод реализующий интерфейс 
+// метод реализующий интерфейс
 func (e *AppError) Error() string {
 	if e.Err != nil {
 		return fmt.Sprintf("%s: %s: %v", e.Code, e.Message, e.Err)
