@@ -3,6 +3,7 @@ package app
 import (
 	"micr_service_auth/internal/config"
 	"micr_service_auth/internal/http"
+	"micr_service_auth/internal/logger"
 	"micr_service_auth/internal/storage/connection"
 	"micr_service_auth/internal/storage/repository/postgres"
 	"micr_service_auth/internal/storage/repository/redis"
@@ -20,6 +21,8 @@ type App struct {
 
 func Run() (*App, error) {
 	cfg := config.Load()
+
+	logger.Init()
 
 	// --- Postgres ---
 	db, err := connection.NewPostgresDB(cfg)

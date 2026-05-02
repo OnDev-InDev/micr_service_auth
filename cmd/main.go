@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"micr_service_auth/internal/app"
 	"net/http"
 	"os"
@@ -12,23 +12,25 @@ import (
 )
 
 func main() {
+
 	application, err := app.Run()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("failed to start app", slog.Any("error", err))
+		os.Exit(1)
 	}
 
-	// НАСТОЯЩИЙ HTTP SERVER
 	server := &http.Server{
 		Addr:    ":8080",
-		Handler: application.Router.Router(),
+		Handler: application.Router.Handler(),
 	}
 
 	// запуск сервера
 	go func() {
-		log.Println("Server started on :8080")
+		slog.Info("server started", slog.String("addr", ":8080"))
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			slog.Error("server crashed", slog.Any("error", err))
+			os.Exit(1)
 		}
 	}()
 
@@ -37,20 +39,20 @@ func main() {
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	<-stop
-	log.Println("Shutting down...")
+	slog.Info("shutdown signal received")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// 1. HTTP shutdown (реальный сервер)
+	// HTTP shutdown
 	if err := server.Shutdown(ctx); err != nil {
-		log.Printf("HTTP shutdown error: %v", err)
+		slog.Error("http shutdown error", slog.Any("error", err))
 	}
 
-	// 2. зависимости
+	// shutdown зависимостей
 	if err := application.Shutdown(); err != nil {
-		log.Printf("App shutdown error: %v", err)
+		slog.Error("app shutdown error", slog.Any("error", err))
 	}
 
-	log.Println("Server stopped")
+	slog.Info("server stopped")
 }

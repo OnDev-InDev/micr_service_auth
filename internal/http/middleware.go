@@ -4,9 +4,10 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"log"
 	"net/http"
 	"time"
+
+	"log/slog"
 
 	"micr_service_auth/internal/domain"
 	"micr_service_auth/internal/errors"
@@ -41,8 +42,8 @@ func (m *AuthMiddleware) RequireSession(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), UserIDKey, session.UserID)
-		ctx = context.WithValue(ctx, RoleKey, session.Role)
+		ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
+		ctx = context.WithValue(ctx, roleKey, session.Role)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
@@ -51,13 +52,20 @@ func (m *AuthMiddleware) RequireSession(next http.Handler) http.Handler {
 func (m *AuthMiddleware) RequireRole(role string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		userRole, ok := r.Context().Value(RoleKey).(string)
+		logger := LoggerFromContext(r.Context())
+
+		userRole, ok := RoleFromContext(r.Context())
 		if !ok || userRole == "" {
+			logger.Warn("missing role")
 			writeError(w, r, errors.New(errors.CodeUnauthorized, "missing role"))
 			return
 		}
 
 		if userRole != role {
+			logger.Warn("insufficient permissions",
+				slog.String("required_role", role),
+				slog.String("user_role", userRole),
+			)
 			writeError(w, r, errors.New(errors.CodeForbidden, "insufficient permissions"))
 			return
 		}
@@ -77,12 +85,11 @@ func RequestID(next http.Handler) http.Handler {
 
 		requestID := generateID()
 
-		ctx := context.WithValue(r.Context(), RequestIDKey, requestID)
-		r = r.WithContext(ctx)
+		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
 
 		w.Header().Set("X-Request-ID", requestID)
 
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -108,17 +115,11 @@ func Logging(next http.Handler) http.Handler {
 
 		next.ServeHTTP(lrw, r)
 
-		duration := time.Since(start)
-
-		requestID, _ := r.Context().Value(RequestIDKey).(string)
-
-		log.Printf(
-			"request_id=%s method=%s path=%s status=%d duration=%s",
-			requestID,
-			r.Method,
-			r.URL.Path,
-			lrw.status,
-			duration,
+		slog.Info("http_request",
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.Path),
+			slog.Int("status", lrw.status),
+			slog.Duration("duration", time.Since(start)),
 		)
 	})
 }

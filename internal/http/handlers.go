@@ -29,7 +29,7 @@ func NewHandler(usecaseAuth AuthUsecase) *Handler {
 	}
 }
 
-func (h *Handler) createCookie(ctx context.Context, w http.ResponseWriter, sessionID string) {
+func (h *Handler) createCookie(w http.ResponseWriter, sessionID string) {
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    sessionID,
@@ -70,7 +70,7 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//создаем сессию
-	h.createCookie(ctx, w, sessionID)
+	h.createCookie(w, sessionID)
 
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"success": true,
@@ -81,10 +81,10 @@ func (h *Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 // ручка для авторизованных
 func (h *Handler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 
-	userID, _ := r.Context().Value(UserIDKey).(string)
-	role, _ := r.Context().Value(RoleKey).(string)
+	userID, _ := UserIDFromContext(r.Context())
+	role, _ := RoleFromContext(r.Context())
 
-	jsonResponse(w, http.StatusOK, map[string]interface{}{
+	jsonResponse(w, http.StatusOK, map[string]any{
 		"success": true,
 		"user_id": userID,
 		"role":    role,

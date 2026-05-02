@@ -5,28 +5,31 @@ import (
 )
 
 type Router struct {
-	router *http.ServeMux
+	mux *http.ServeMux
 }
 
 func NewRouter(h *Handler, auth *AuthMiddleware) *Router {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/post/signin", h.AuthHandler)
+	// auth endpoints
+	mux.HandleFunc("/signin", h.AuthHandler)
+	mux.HandleFunc("/logout", h.LogoutHandler)
+
+	// protected chain
+	protected := http.HandlerFunc(h.ProtectedHandler)
 
 	mux.Handle("/protected",
 		auth.RequireSession(
-			auth.RequireRole("user", http.HandlerFunc(h.ProtectedHandler)),
+			auth.RequireRole("user", protected),
 		),
 	)
 
-	mux.HandleFunc("/post/logout", h.LogoutHandler)
-
 	return &Router{
-		router: mux,
+		mux: mux,
 	}
 }
 
-func (s *Router) Router() http.Handler {
-	return s.router
+func (r *Router) Handler() http.Handler {
+	return r.mux
 }
