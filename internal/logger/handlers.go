@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 
-	"micr_service_auth/internal/http"
+	"github.com/OnDev-InDev/micr_service_auth/internal/http"
 )
 
 type ContextHandler struct {

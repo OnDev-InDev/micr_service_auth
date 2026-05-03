@@ -6,7 +6,7 @@ import (
 
 	"log/slog"
 
-	appErrors "micr_service_auth/internal/errors"
+	appErrors "github.com/OnDev-InDev/micr_service_auth/internal/errors"
 )
 
 func writeError(w http.ResponseWriter, r *http.Request, err error) {

@@ -2,12 +2,12 @@ package usecase
 
 import (
 	"context"
-	"micr_service_auth/internal/domain"
-	"micr_service_auth/internal/errors"
 	"time"
 
+	"github.com/OnDev-InDev/micr_service_auth/internal/domain"
+	"github.com/OnDev-InDev/micr_service_auth/internal/errors"
+	"github.com/OnDev-InDev/micr_service_auth/internal/pkg"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -59,18 +59,11 @@ func NewUsecase(userRepo UserRepository, sessionRepo SessionRepository) *AuthUC 
 	}
 }
 
-// генерация ID
-func generateSessionID() string {
-	newID := uuid.New().String()
-	return newID
-}
-
 func (uc *AuthUC) Login(ctx context.Context, input LoginInput) (string, error) {
 	if err := input.Validate(); err != nil {
 		return "", err
 	}
 
-	// 1. идентификация / авторизация
 	user, err := uc.userRepo.Get(input.Email)
 	if err != nil {
 		return "", err
@@ -84,9 +77,8 @@ func (uc *AuthUC) Login(ctx context.Context, input LoginInput) (string, error) {
 		return "", errors.New(errors.CodeInvalidCredentials, "invalid credentials")
 	}
 
-	sessionID := generateSessionID()
+	sessionID := pkg.GenerateID()
 
-	//описываем новую сессию
 	session := domain.Session{
 		ID:        sessionID,
 		UserID:    user.ID,
@@ -102,7 +94,6 @@ func (uc *AuthUC) Login(ctx context.Context, input LoginInput) (string, error) {
 }
 
 func (uc *AuthUC) GetSession(ctx context.Context, sessionID string) (domain.Session, error) {
-	// Получаем JSON из Redis
 	session, err := uc.sessionRepo.Get(ctx, sessionID)
 	if err != nil {
 		return domain.Session{}, err
@@ -116,5 +107,8 @@ func (uc *AuthUC) GetSession(ctx context.Context, sessionID string) (domain.Sess
 }
 
 func (uc *AuthUC) Logout(ctx context.Context, sessionID string) error {
+	if sessionID == "" {
+		return errors.New(errors.CodeForbidden, "empty session id")
+	}
 	return uc.sessionRepo.Delete(ctx, sessionID)
 }

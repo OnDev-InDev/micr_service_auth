@@ -3,10 +3,11 @@ package http
 import (
 	"context"
 	"encoding/json"
-	"micr_service_auth/internal/errors"
-	"micr_service_auth/internal/usecase"
 	"net/http"
 	"time"
+
+	"github.com/OnDev-InDev/micr_service_auth/internal/errors"
+	"github.com/OnDev-InDev/micr_service_auth/internal/usecase"
 )
 
 type Credentials struct {

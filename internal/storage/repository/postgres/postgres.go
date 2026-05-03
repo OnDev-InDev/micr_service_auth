@@ -1,14 +1,13 @@
-package connection
+package postgres
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/OnDev-InDev/micr_service_auth/internal/config"
 	"github.com/jinzhu/gorm"
 	_ "github.com/lib/pq"
-
-	"micr_service_auth/internal/config"
 )
 
 func NewPostgresDB(cfg config.Config) (*gorm.DB, error) {
@@ -28,17 +27,15 @@ func NewPostgresDB(cfg config.Config) (*gorm.DB, error) {
 
 	sqlDB := db.DB()
 
-	if sqlDB != nil {
-		sqlDB.SetMaxOpenConns(25)
-		sqlDB.SetMaxIdleConns(10)
-		sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 
-		if err := sqlDB.PingContext(ctx); err != nil {
-			return nil, fmt.Errorf("postgres ping failed: %w", err)
-		}
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return nil, fmt.Errorf("postgres ping failed: %w", err)
 	}
 
 	return db, nil

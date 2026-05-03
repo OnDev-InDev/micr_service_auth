@@ -1,9 +1,8 @@
 package postgres
 
 import (
-	"micr_service_auth/internal/domain"
-	"micr_service_auth/internal/errors"
-
+	"github.com/OnDev-InDev/micr_service_auth/internal/domain"
+	"github.com/OnDev-InDev/micr_service_auth/internal/errors"
 	"github.com/jinzhu/gorm"
 )
 

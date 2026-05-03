@@ -1,10 +1,12 @@
 package config
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
+
+	"github.com/OnDev-InDev/micr_service_auth/internal/errors"
 )
 
 type Config struct {
@@ -15,12 +17,9 @@ type Config struct {
 	DBPort string
 }
 
-func Load() Config {
-	// грузим .env только если не прод
+func Load() (Config, error) {
 	if os.Getenv("APP_ENV") != "production" {
-		if err := godotenv.Load(); err != nil {
-			log.Println("no .env file found (ok for production)")
-		}
+		_ = godotenv.Load()
 	}
 
 	cfg := Config{
@@ -31,16 +30,32 @@ func Load() Config {
 		DBPort: os.Getenv("DB_PORT"),
 	}
 
-	validate(cfg)
+	if err := validate(cfg); err != nil {
+		return Config{}, err
+	}
 
-	return cfg
+	return cfg, nil
 }
 
-func validate(cfg Config) {
-	if cfg.DBHost == "" ||
-		cfg.DBPort == "" ||
-		cfg.DBUser == "" ||
-		cfg.DBName == "" {
-		log.Fatal("database config is not set properly (env variables missing)")
+func validate(cfg Config) error {
+	var missing []string
+
+	if cfg.DBHost == "" {
+		missing = append(missing, "DB_HOST")
 	}
+	if cfg.DBPort == "" {
+		missing = append(missing, "DB_PORT")
+	}
+	if cfg.DBUser == "" {
+		missing = append(missing, "DB_USER")
+	}
+	if cfg.DBName == "" {
+		missing = append(missing, "DB_NAME")
+	}
+
+	if len(missing) > 0 {
+		return errors.Wrap(errors.CodeValidationError, fmt.Sprintf("missing required env vars: %v", missing), nil,)
+	}
+
+	return nil
 }

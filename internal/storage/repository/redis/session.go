@@ -3,10 +3,10 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"micr_service_auth/internal/domain"
-	"micr_service_auth/internal/errors"
 	"time"
 
+	"github.com/OnDev-InDev/micr_service_auth/internal/domain"
+	"github.com/OnDev-InDev/micr_service_auth/internal/errors"
 	"github.com/redis/go-redis/v9"
 )
 

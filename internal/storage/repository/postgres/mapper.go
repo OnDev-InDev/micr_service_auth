@@ -1,6 +1,6 @@
 package postgres
 
-import "micr_service_auth/internal/domain"
+import "github.com/OnDev-InDev/micr_service_auth/internal/domain"
 
 func toDomain(u UserModel) domain.User {
 	return domain.User{

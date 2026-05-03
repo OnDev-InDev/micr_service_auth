@@ -3,12 +3,13 @@ package main
 import (
 	"context"
 	"log/slog"
-	"micr_service_auth/internal/app"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/OnDev-InDev/micr_service_auth/internal/app"
 )
 
 func main() {

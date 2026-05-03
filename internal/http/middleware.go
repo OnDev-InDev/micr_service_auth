@@ -2,15 +2,14 @@ package http
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"net/http"
 	"time"
 
 	"log/slog"
 
-	"micr_service_auth/internal/domain"
-	"micr_service_auth/internal/errors"
+	"github.com/OnDev-InDev/micr_service_auth/internal/domain"
+	"github.com/OnDev-InDev/micr_service_auth/internal/errors"
+	"github.com/OnDev-InDev/micr_service_auth/internal/pkg"
 )
 
 type SessionChecker interface {
@@ -74,16 +73,10 @@ func (m *AuthMiddleware) RequireRole(role string, next http.Handler) http.Handle
 	})
 }
 
-func generateID() string {
-	b := make([]byte, 8)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
-}
-
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		requestID := generateID()
+		requestID := pkg.GenerateID()
 
 		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
 
