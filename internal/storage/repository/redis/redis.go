@@ -5,24 +5,33 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/OnDev-InDev/micr_service_auth/internal/config"
 	"github.com/redis/go-redis/v9"
 )
 
-func NewRedisClient() (*redis.Client, error) {
-	client := redis.NewClient(&redis.Options{
-		Addr:         "localhost:6379",
-		Password:     "",
-		DB:           0,
-		DialTimeout:  3 * time.Second,
-		ReadTimeout:  3 * time.Second,
-		WriteTimeout: 3 * time.Second,
-	})
+func NewRedisClient(cfg config.ConfigRedis) (*redis.Client, error) {
+	redisURL := fmt.Sprintf(
+		"redis://%s:%s",
+		cfg.RedisHost,
+		cfg.RedisPort,
+	)
+
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse redis url: %w", err)
+	}
+
+	opt.DialTimeout = 3 * time.Second
+	opt.ReadTimeout = 3 * time.Second
+	opt.WriteTimeout = 3 * time.Second
+
+	client := redis.NewClient(opt)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	if _, err := client.Ping(ctx).Result(); err != nil {
-		return nil, fmt.Errorf("error connecting to Redis: %w", err)
+	if err := client.Ping(ctx).Err(); err != nil {
+		return nil, fmt.Errorf("connect redis: %w", err)
 	}
 
 	return client, nil

@@ -18,19 +18,24 @@ type App struct {
 }
 
 func Run() (*App, error) {
-	cfg, err := config.Load()
+	cfgPostgres, err := config.LoadPostgres()
+	if err != nil {
+		return nil, err
+	}
+
+	db, err := postgres.NewPostgresDB(cfgPostgres)
+	if err != nil {
+		return nil, err
+	}
+
+	cfgRedis, err := config.LoadRedis()
 	if err != nil {
 		return nil, err
 	}
 
 	logger.Init()
 
-	db, err := postgres.NewPostgresDB(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	rdb, err := redis.NewRedisClient()
+	rdb, err := redis.NewRedisClient(cfgRedis)
 	if err != nil {
 		return nil, err
 	}

@@ -10,14 +10,14 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func NewPostgresDB(cfg config.Config) (*gorm.DB, error) {
+func NewPostgresDB(cfg config.ConfigPostgres) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
-		cfg.DBHost,
-		cfg.DBPort,
-		cfg.DBUser,
-		cfg.DBName,
-		cfg.DBPass,
+		cfg.PostgresHost,
+		cfg.PostgresPort,
+		cfg.PostgresUser,
+		cfg.PostgresName,
+		cfg.PostgresPassword,
 	)
 
 	db, err := gorm.Open("postgres", dsn)
